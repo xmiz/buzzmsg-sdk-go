@@ -21,8 +21,8 @@ type UUID [16]byte
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 func GetUUID() (uuidHex string) {
-	uuid := NewUUID()
-	uuidHex = hex.EncodeToString(uuid[:])
+	newUUID := NewUUID()
+	uuidHex = hex.EncodeToString(newUUID[:])
 	return
 }
 
@@ -93,8 +93,7 @@ func NewUUID() UUID {
 	safeRandom(ns[:])
 	u := newFromHash(md5.New(), ns, RandStringBytes(16))
 	u[6] = (u[6] & 0x0f) | (byte(2) << 4)
-	u[8] = (u[8]&(0xff>>2) | (0x02 << 6))
-
+	u[8] = u[8]&(0xff>>2) | (0x02 << 6)
 	return u
 }
 

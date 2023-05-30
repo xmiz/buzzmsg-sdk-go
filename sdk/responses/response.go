@@ -25,7 +25,7 @@ import (
 	"github.com/xmiz/buzzmsg-sdk-go/sdk/errors"
 )
 
-type AcsResponse interface {
+type Response interface {
 	IsSuccess() bool
 	GetHttpStatus() int
 	GetHttpHeaders() map[string][]string
@@ -36,7 +36,7 @@ type AcsResponse interface {
 }
 
 // Unmarshal object from http response body to target Response
-func Unmarshal(response AcsResponse, httpResponse *http.Response, format string) (err error) {
+func Unmarshal(response Response, httpResponse *http.Response, format string) (err error) {
 	err = response.parseFromHttpResponse(httpResponse)
 	if err != nil {
 		return
@@ -56,10 +56,10 @@ func Unmarshal(response AcsResponse, httpResponse *http.Response, format string)
 	}
 
 	if strings.ToUpper(format) == "JSON" {
-		err = jsonParser.Unmarshal(response.GetHttpContentBytes(), response)
-		if err != nil {
-			err = errors.NewClientError(errors.JsonUnmarshalErrorCode, errors.JsonUnmarshalErrorMessage, err)
-		}
+		//err = jsonParser.Unmarshal(response.GetHttpContentBytes(), response)
+		//if err != nil {
+		//	err = errors.NewClientError(errors.JsonUnmarshalErrorCode, errors.JsonUnmarshalErrorMessage, err)
+		//}
 	} else if strings.ToUpper(format) == "XML" {
 		err = xml.Unmarshal(response.GetHttpContentBytes(), response)
 	}

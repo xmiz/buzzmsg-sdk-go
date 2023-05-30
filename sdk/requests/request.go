@@ -1,10 +1,10 @@
-package request
+package requests
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/xmiz/buzzmsg-sdk-go/utils"
+	"github.com/xmiz/buzzmsg-sdk-go/sdk/utils"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -42,39 +42,103 @@ const (
 	//ImsdkServerDebugHost = "http://localhost:7500/"
 )
 
-type Request struct {
-	Scheme         string
-	Host           string
-	Method         string
-	Domain         string
-	Port           string
-	ReadTimeout    time.Duration
-	ConnectTimeout time.Duration
-	userAgent      map[string]string
-	version        string
-	actionName     string
-	AcceptFormat   string
-	QueryParams    map[string]string
-	Headers        map[string]string
-	FormParams     map[string]string
-	Content        []byte
+// interface
+type Request interface {
+	GetScheme() string
+	GetMethod() string
+	GetDomain() string
+	GetPort() string
+	GetRegionId() string
+	GetHeaders() map[string]string
+	GetQueryParams() map[string]string
+	GetFormParams() map[string]string
+	GetContent() []byte
+	GetBodyReader() io.Reader
+	GetStyle() string
+	GetProduct() string
+	GetVersion() string
+	SetVersion(version string)
+	GetActionName() string
+	GetAcceptFormat() string
+	GetLocationServiceCode() string
+	GetLocationEndpointType() string
+	GetReadTimeout() time.Duration
+	GetConnectTimeout() time.Duration
+	SetReadTimeout(readTimeout time.Duration)
+	SetConnectTimeout(connectTimeout time.Duration)
+	SetHTTPSInsecure(isInsecure bool)
+	GetHTTPSInsecure() *bool
+
+	GetUserAgent() map[string]string
+
+	SetStringToSign(stringToSign string)
+	GetStringToSign() string
+
+	SetDomain(domain string)
+	SetContent(content []byte)
+	SetScheme(scheme string)
+	BuildUrl() string
+	BuildQueries() string
+
+	addHeaderParam(key, value string)
+	addQueryParam(key, value string)
+	addFormParam(key, value string)
+	addPathParam(key, value string)
 }
 
-func New() *Request {
-	return &Request{}
+type baseRequest struct {
+	Scheme               string
+	Host                 string
+	Method               string
+	Domain               string
+	Port                 string
+	ReadTimeout          time.Duration
+	ConnectTimeout       time.Duration
+	userAgent            map[string]string
+	version              string
+	product              string
+	actionName           string
+	AcceptFormat         string
+	QueryParams          map[string]string
+	Headers              map[string]string
+	FormParams           map[string]string
+	Content              []byte
+	locationServiceCode  string
+	locationEndpointType string
+	stringToSign         string
 }
 
-func GetImsdkServerHost(ctx context.Context, model imsdkV2.ModelType) string {
-	//imsdkServerHost, _ := config.GetIMSDKServer()
-	//return imsdkServerHost
-	res := ImsdkServerDebugHost
-	if model == imsdkV2.ModelRelease {
-		res = ImsdkServerReleaseHost
+func New() *baseRequest {
+	return &baseRequest{}
+}
+
+func defaultBaseRequest() (request *baseRequest) {
+	request = &baseRequest{
+		Scheme:       "",
+		AcceptFormat: "JSON",
+		Method:       POST,
+		QueryParams:  make(map[string]string),
+		Headers: map[string]string{
+			"x-sdk-client":      "golang/1.0.0",
+			"x-sdk-invoke-type": "normal",
+			"Accept-Encoding":   "identity",
+		},
+		FormParams: make(map[string]string),
 	}
-	return res
+	return
 }
 
-func (request *Request) Post() ([]byte, error) {
+//func GetImsdkServerHost(ctx context.Context, model imsdkV2.ModelType) string {
+//	//imsdkServerHost, _ := config.GetIMSDKServer()
+//	//return imsdkServerHost
+//	res := ImsdkServerDebugHost
+//	//if model == imsdkV2.ModelRelease {
+//	//	res = ImsdkServerReleaseHost
+//	//}
+//	return res
+//}
+
+func (request *baseRequest) Post() ([]byte, error) {
 	params := request.GetContent()
 	//byteData, _ := json.Marshal(params)
 	//fmt.Println(" strings.NewReader(string(byteData)):", strings.NewReader(string(byteData)))
@@ -98,7 +162,7 @@ func (request *Request) Post() ([]byte, error) {
 	return ioutil.ReadAll(resp.Body)
 }
 
-func (request *Request) Get() ([]byte, error) {
+func (request *baseRequest) Get() ([]byte, error) {
 	params := request.GetQueryParams()
 	byteData, _ := json.Marshal(params)
 	fmt.Println(" strings.NewReader(string(byteData)):", strings.NewReader(string(byteData)))
@@ -121,7 +185,7 @@ func (request *Request) Get() ([]byte, error) {
 	return ioutil.ReadAll(resp.Body)
 }
 
-func (request *Request) SetContentType(contentType string) *Request {
+func (request *baseRequest) SetContentType(contentType string) *baseRequest {
 	if contentType == "" {
 		contentType = Json
 	}
@@ -129,64 +193,68 @@ func (request *Request) SetContentType(contentType string) *Request {
 	return request
 }
 
-func (request *Request) GetContentType() (contentType string, contains bool) {
+func (request *baseRequest) GetContentType() (contentType string, contains bool) {
 	contentType, contains = request.Headers["Content-Type"]
 	return
 }
 
-func (request *Request) SetHost(host string) *Request {
+func (request *baseRequest) SetHost(host string) *baseRequest {
 	request.Host = host
 	return request
 }
 
-func (request *Request) GetHost() string {
+func (request *baseRequest) GetHost() string {
 	return request.Host
 }
 
-func (request *Request) SetMethod(method string) *Request {
+func (request *baseRequest) SetMethod(method string) *baseRequest {
 	request.Method = method
 	return request
 }
 
-func (request *Request) GetMethod() string {
+func (request *baseRequest) GetMethod() string {
 	return request.Method
 }
 
-func (request *Request) SetContent(content []byte) *Request {
+func (request *baseRequest) SetContent(content []byte) *baseRequest {
 	request.Content = content
 	return request
 }
 
-func (request *Request) GetContent() []byte {
+func (request *baseRequest) GetContent() []byte {
 	return request.Content
 }
 
-func (request *Request) SetVersion(version string) *Request {
+func (request *baseRequest) SetVersion(version string) *baseRequest {
 	request.version = version
 	return request
 }
 
-func (request *Request) GetVersion() string {
+func (request *baseRequest) GetVersion() string {
 	return request.version
 }
 
-func (request *Request) GetActionName() string {
+func (request *baseRequest) GetActionName() string {
 	return request.actionName
 }
 
-func (request *Request) GetQueryParams() map[string]string {
+func (request *baseRequest) GetQueryParams() map[string]string {
 	return request.QueryParams
 }
 
-func (request *Request) GetFormParams() map[string]string {
+func (request *baseRequest) GetFormParams() map[string]string {
 	return request.FormParams
 }
 
-func (request *Request) GetUserAgent() map[string]string {
+func (request *baseRequest) GetUserAgent() map[string]string {
 	return request.userAgent
 }
 
-func (request *Request) AppendUserAgent(key, value string) {
+func (request *baseRequest) GetHeaders() map[string]string {
+	return request.Headers
+}
+
+func (request *baseRequest) AppendUserAgent(key, value string) {
 	newkey := true
 	if request.userAgent == nil {
 		request.userAgent = make(map[string]string)
@@ -204,23 +272,23 @@ func (request *Request) AppendUserAgent(key, value string) {
 	}
 }
 
-func (request *Request) addHeaderParam(key, value string) {
+func (request *baseRequest) addHeaderParam(key, value string) {
 	request.Headers[key] = value
 }
 
-func (request *Request) addQueryParam(key, value string) {
+func (request *baseRequest) addQueryParam(key, value string) {
 	request.QueryParams[key] = value
 }
 
-func (request *Request) addFormParam(key, value string) {
+func (request *baseRequest) addFormParam(key, value string) {
 	request.FormParams[key] = value
 }
 
-func (request *Request) GetDomain() string {
+func (request *baseRequest) GetDomain() string {
 	return request.Domain
 }
 
-func (request *Request) SetDomain(host string) *Request {
+func (request *baseRequest) SetDomain(host string) *baseRequest {
 	request.Domain = host
 	return request
 }

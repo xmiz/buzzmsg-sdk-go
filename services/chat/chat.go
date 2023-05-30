@@ -1,4 +1,4 @@
-package chatbot
+package chat
 
 //Licensed under the Apache License, Version 2.0 (the "License");
 //you may not use this file except in compliance with the License.
@@ -20,94 +20,45 @@ import (
 	"github.com/xmiz/buzzmsg-sdk-go/sdk/responses"
 )
 
-// Chat invokes the chatbot.Chat API synchronously
-// api document: https://help.aliyun.com/api/chatbot/chat.html
-func (client *Client) Chat(request *ChatRequest) (response *ChatResponse, err error) {
+// Chat invokes the chat.Chat API synchronously
+func (client *Client) Chat(request *Request) (response *Response, err error) {
 	response = CreateChatResponse()
-	err = client.DoAction(request, response)
+	//err = client.DoAction(request, response)
 	return
 }
 
-// ChatWithChan invokes the chatbot.Chat API asynchronously
-// api document: https://help.aliyun.com/api/chatbot/chat.html
-// asynchronous document: https://help.aliyun.com/document_detail/66220.html
-func (client *Client) ChatWithChan(request *ChatRequest) (<-chan *ChatResponse, <-chan error) {
-	responseChan := make(chan *ChatResponse, 1)
-	errChan := make(chan error, 1)
-	err := client.AddAsyncTask(func() {
-		defer close(responseChan)
-		defer close(errChan)
-		response, err := client.Chat(request)
-		if err != nil {
-			errChan <- err
-		} else {
-			responseChan <- response
-		}
-	})
-	if err != nil {
-		errChan <- err
-		close(responseChan)
-		close(errChan)
-	}
-	return responseChan, errChan
+// Request is the request struct for api Chat
+type Request struct {
+	*requests.HttpRequest
+	AChatId string                 `json:"achat_id" binding:"required"`
+	AUIds   []string               `json:"auids"`
+	Type    int8                   `json:"type"`
+	Creator string                 `json:"creator"`
+	Name    string                 `json:"name"`
+	Avatar  map[string]interface{} `json:"avatar"`
 }
 
-// ChatWithCallback invokes the chatbot.Chat API asynchronously
-// api document: https://help.aliyun.com/api/chatbot/chat.html
-// asynchronous document: https://help.aliyun.com/document_detail/66220.html
-func (client *Client) ChatWithCallback(request *ChatRequest, callback func(response *ChatResponse, err error)) <-chan int {
-	result := make(chan int, 1)
-	err := client.AddAsyncTask(func() {
-		var response *ChatResponse
-		var err error
-		defer close(result)
-		response, err = client.Chat(request)
-		callback(response, err)
-		result <- 1
-	})
-	if err != nil {
-		defer close(result)
-		callback(nil, err)
-		result <- 0
-	}
-	return result
-}
-
-// ChatRequest is the request struct for api Chat
-type ChatRequest struct {
-	*requests.RpcRequest
-	KnowledgeId string    `position:"Query" name:"KnowledgeId"`
-	SenderId    string    `position:"Query" name:"SenderId"`
-	InstanceId  string    `position:"Query" name:"InstanceId"`
-	SenderNick  string    `position:"Query" name:"SenderNick"`
-	Perspective *[]string `position:"Query" name:"Perspective"  type:"Repeated"`
-	SessionId   string    `position:"Query" name:"SessionId"`
-	Tag         string    `position:"Query" name:"Tag"`
-	Utterance   string    `position:"Query" name:"Utterance"`
-}
-
-// ChatResponse is the response struct for api Chat
-type ChatResponse struct {
+// Response is the response struct for api Chat
+type Response struct {
 	*responses.BaseResponse
-	RequestId string    `json:"RequestId" xml:"RequestId"`
-	SessionId string    `json:"SessionId" xml:"SessionId"`
-	MessageId string    `json:"MessageId" xml:"MessageId"`
-	Tag       string    `json:"Tag" xml:"Tag"`
-	Messages  []Message `json:"Messages" xml:"Messages"`
+	RequestId string `json:"RequestId" xml:"RequestId"`
+	SessionId string `json:"SessionId" xml:"SessionId"`
+	MessageId string `json:"MessageId" xml:"MessageId"`
+	Tag       string `json:"Tag" xml:"Tag"`
 }
 
 // CreateChatRequest creates a request to invoke Chat API
-func CreateChatRequest() (request *ChatRequest) {
-	request = &ChatRequest{
-		RpcRequest: &requests.RpcRequest{},
+func CreateChatRequest() (request *Request) {
+	request = &Request{
+		HttpRequest: &requests.HttpRequest{},
 	}
-	request.InitWithApiInfo("Chatbot", "2017-10-11", "Chat", "beebot", "openAPI")
+	request.InitWithApiInfo("Chat", "2017-10-11", "Chat", "beebot", "openAPI")
 	return
 }
 
 // CreateChatResponse creates a response to parse from Chat response
-func CreateChatResponse() (response *ChatResponse) {
-	response = &ChatResponse{
+func CreateChatResponse() (response *Response) {
+	response = &Response{
 		BaseResponse: &responses.BaseResponse{},
 	}
 	return

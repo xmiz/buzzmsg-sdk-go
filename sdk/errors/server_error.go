@@ -22,7 +22,7 @@ import (
 )
 
 var wrapperList = []ServerErrorWrapper{
-	&SignatureDostNotMatchWrapper{},
+	//&SignatureDostNotMatchWrapper{},
 }
 
 type ServerError struct {
